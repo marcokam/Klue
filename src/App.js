@@ -6,14 +6,14 @@ import {
     Route,
     Redirect,
 } from "react-router-dom";
-import { Search } from "./components/Search";
+import { Search } from "./components/Search/Search";
 
 
 function App() {
     return (
         <Router>
             <Switch>
-                <Route path="/search/:term?">
+                <Route path="/search/:searchTerm?">
                     <Search />
                 </Route>
                 <Route path="/">
