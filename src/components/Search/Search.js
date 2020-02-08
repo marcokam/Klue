@@ -3,15 +3,15 @@ import { useParams } from "react-router-dom";
 import { debounce } from "lodash-es";
 
 import { searchPhotos, apiStates } from "../../api";
-import { Masonry } from "../Masonry/Masonry";
+import { PhotoGrid } from "../Photos/PhotosGrid";
 
 
-export function Search({ pageSize = 20 }) {
+export function Search({ pageSize = 30 }) {
     const { searchTerm: initialSearchTerm = "" } = useParams();
     const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
     const dbSetSearchTerm = useMemo(() => debounce(setSearchTerm, 200), []);
-    const [searchData, setSearchData] = useState({ apiState: apiStates.none, payload: {} });
-    const { results: photos = [] } = searchData.payload;
+    const [photos, setPhotos] = useState([]);
+    const [metaData, setMetaData] = useState({ apiState: apiStates.none, data: {} })
     const handleSearch = useCallback(event => {
         const searchTerm = (event && event.target && event.target.value) || "";
         dbSetSearchTerm(searchTerm);
@@ -19,19 +19,21 @@ export function Search({ pageSize = 20 }) {
 
     useEffect(() => {
         if (!searchTerm) {
-            setSearchData(prev => ({ ...prev, payload: {} }));
+            setMetaData(prev => ({ ...prev, data: {} }));
         };
 
         let cancelled = false;
-        setSearchData(prev => ({ ...prev, apiState: apiStates.fetching }));
+        setMetaData(prev => ({ ...prev, apiState: apiStates.fetching }));
+        setPhotos([]);
         searchPhotos({ query: searchTerm, per_page: pageSize })
-            .then((payload = {}) => {
+            .then(({ results = [], ...data } = {}) => {
                 if (cancelled) return;
-                setSearchData({ apiState: apiStates.fetched, payload });
+                setMetaData({ apiState: apiStates.fetched, data });
+                setPhotos(results);
             })
             .catch(err => {
                 if (cancelled) return;
-                setSearchData(prev => ({ ...prev, apiState: apiStates.error }));
+                setMetaData(prev => ({ ...prev, apiState: apiStates.error }));
             })
 
         return () => {
@@ -47,15 +49,9 @@ export function Search({ pageSize = 20 }) {
                 <img className="h2" src="https://klue.com/wp-content/themes/klue/assets-home2/img/logo-klue.svg" alt="Klue logo" />
                 <input className="input-reset ml3 pa2 br2 ba b--black-20 w5" defaultValue={searchTerm} placeholder="Search for a Photo" onChange={handleSearch} />
             </div>
-            <Masonry>
-                {photos.map((photo = {}) => {
-                    const { id = "", urls = {}, alt_description = "", description = "" } = photo;
-                    const altText = alt_description || description || `photo`;
-                    return (urls.thumb &&
-                        <img key={id} className="grow" src={urls.thumb} alt={altText} />
-                    );
-                })}
-            </Masonry>
+            <div className="w-100 mt4 mw9 ph2">
+                {metaData.apiState === apiStates.fetched && photos.length > 0 && <PhotoGrid photos={photos} />}
+            </div>
         </div>
     );
 }
