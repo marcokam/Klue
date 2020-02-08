@@ -44,7 +44,6 @@ export function PhotoGrid({ photos = [], query = {}, getNext = noop }) {
             const { urls = {}, alt_description = "", description = "" } = item;
             const altText = alt_description || description || `photo`;
             const { apiState } = query;
-            console.log('query', query);
 
             if (index > 0 && index === photos.length - 1) getNext();
 

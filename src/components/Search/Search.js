@@ -1,23 +1,27 @@
-import React, { useEffect, useState, useMemo, useCallback, createRef } from "react";
-import { useParams } from "react-router-dom";
+import React, { useEffect, useState, useCallback, createRef } from "react";
+import { useParams, withRouter } from "react-router-dom";
 import { debounce, once } from "lodash-es";
 
 import { searchPhotos, getNextPhotos, apiStates } from "../../api";
 import { PhotoGrid } from "../Photos/PhotosGrid";
 
-export function Search({ pageSize = 30 }) {
+export const Search = withRouter(function SearchComponent({ pageSize = 30, history, location }) {
     const searchInputRef = createRef();
-    const { searchTerm: initialSearchTerm = "" } = useParams();
-    const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
-    const dbSetSearchTerm = useMemo(() => debounce(setSearchTerm, 200), []);
+    const { searchTerm = "" } = useParams();
+    const dbUpdateRoute = useCallback(debounce((searchTerm = "") => {
+        history.replace({
+            ...location,
+            pathname: searchTerm !== "" ? `/search/${searchTerm}` : `/search`
+        });
+    }, 200), [history]);
     const [photos, setPhotos] = useState([]);
     const [query, setQuery] = useState({ apiState: apiStates.none, data: {}, links: {} });
     const handleSearch = useCallback(
         event => {
             const searchTerm = (event && event.target && event.target.value) || "";
-            dbSetSearchTerm(searchTerm);
+            dbUpdateRoute(searchTerm);
         },
-        [dbSetSearchTerm]
+        [dbUpdateRoute]
     );
     const getNext = useCallback(once(() => {
         const nextLink = query.links.next;
@@ -26,11 +30,7 @@ export function Search({ pageSize = 30 }) {
                 .then(([payload = {}, links = {}] = []) => {
                     const { results = [], ...data } = payload;
                     setQuery({ apiState: apiStates.fetched, data, links });
-                    setPhotos(prevPhotos => {
-                        console.log('prevPhotos', prevPhotos);
-                        return prevPhotos.concat(results);
-                        // return prevPhotos.push(...results)
-                    });
+                    setPhotos(prevPhotos => prevPhotos.concat(results));
                 })
                 .catch(error => {
                     setQuery(prev => ({ ...prev, apiState: apiStates.error, error }));
@@ -39,20 +39,17 @@ export function Search({ pageSize = 30 }) {
     }), [query.links.next]);
 
     useEffect(() => {
-       if (searchInputRef.current) {
-           searchInputRef.current.focus();
-       } 
+       if (searchInputRef.current) searchInputRef.current.focus();
     }, [searchInputRef]);
+
     useEffect(() => {
+        setPhotos([]);
         if (!searchTerm) {
             setQuery(prev => ({ ...prev, data: {} }));
-            setPhotos([]);
             return;
         }
-
         let cancelled = false;
         setQuery(prev => ({ ...prev, apiState: apiStates.fetching }));
-        setPhotos([]);
         searchPhotos({ query: searchTerm, per_page: pageSize })
             .then(([payload = {}, links = {}] = []) => {
                 if (cancelled) return;
@@ -70,7 +67,6 @@ export function Search({ pageSize = 30 }) {
         };
     }, [pageSize, searchTerm]);
 
-    console.log("query", query);
 
     return (
         <div className="w-100 flex flex-column items-center">
@@ -79,7 +75,7 @@ export function Search({ pageSize = 30 }) {
                 style={{ top: 0, position: "sticky" }}
             >
                 <img
-                    className="h2"
+                    className="h2 w4"
                     src="https://klue.com/wp-content/themes/klue/assets-home2/img/logo-klue.svg"
                     alt="Klue logo"
                 />
@@ -110,4 +106,4 @@ export function Search({ pageSize = 30 }) {
             </div>
         </div>
     );
-}
+});
