@@ -1,4 +1,5 @@
 import "./tachyons.min.css";
+import "./App.scss";
 import React from "react";
 import {
     BrowserRouter as Router,
