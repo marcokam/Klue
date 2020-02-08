@@ -1,3 +1,5 @@
+import parse from "parse-link-header";
+
 export const apiStates = {
     none: "none",
     fetching: "fetching",
@@ -16,13 +18,21 @@ const generateUrl = (uri, params = {}) => {
     const queryParams = formatQuery(params);
     return `${config.base}${uri}${queryParams ? `?${queryParams}` : ""}`;
 };
-const getJson = (uri = "", params = {}, ...options) =>
-    fetch(generateUrl(uri, params), {
-        ...options,
+const getJsonWithLinkHeaders = (url = "", ...fetchOptions) =>
+    fetch(url, {
+        ...fetchOptions,
         headers: new Headers({
             Authorization: `Client-ID ${config.accessKey}`
         })
-    }).then(response => response.json());
+    }).then(response => {
+        let parsedLinks;
+        try {
+           parsedLinks = parse(response.headers.get("link")) || {}; 
+        } catch (error) {
+           parsedLinks = {}; 
+        }
+        return Promise.all([response.json(), Promise.resolve(parsedLinks)])
+    });
 
-
-export const searchPhotos = (params = {}) => getJson(`/search/photos`, params);
+export const searchPhotos = (params = {}) => getJsonWithLinkHeaders(generateUrl(`/search/photos`, params));
+export const getNextPhotos = (url = "") => url ? getJsonWithLinkHeaders(url) : Promise.all([Promise.resolve({}), Promise.resolve({})]);

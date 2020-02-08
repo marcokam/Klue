@@ -1,0 +1,25 @@
+.uiLoading {
+    &.full {
+        position: fixed;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        margin: 0;
+    }
+
+    .circle {
+        border: 4px solid white;
+        border-top-color: #1a9bfc;
+        animation: spin 1s infinite linear;
+    }
+
+    @keyframes spin {
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+}

@@ -1,16 +1,17 @@
-import React, { Fragment, useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo, useCallback, createRef } from "react";
 import { useParams } from "react-router-dom";
-import { debounce } from "lodash-es";
+import { debounce, once } from "lodash-es";
 
-import { searchPhotos, apiStates } from "../../api";
+import { searchPhotos, getNextPhotos, apiStates } from "../../api";
 import { PhotoGrid } from "../Photos/PhotosGrid";
 
 export function Search({ pageSize = 30 }) {
+    const searchInputRef = createRef();
     const { searchTerm: initialSearchTerm = "" } = useParams();
     const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
     const dbSetSearchTerm = useMemo(() => debounce(setSearchTerm, 200), []);
     const [photos, setPhotos] = useState([]);
-    const [metaData, setMetaData] = useState({ apiState: apiStates.none, data: {} });
+    const [query, setQuery] = useState({ apiState: apiStates.none, data: {}, links: {} });
     const handleSearch = useCallback(
         event => {
             const searchTerm = (event && event.target && event.target.value) || "";
@@ -18,30 +19,58 @@ export function Search({ pageSize = 30 }) {
         },
         [dbSetSearchTerm]
     );
+    const getNext = useCallback(once(() => {
+        const nextLink = query.links.next;
+        if (nextLink && nextLink.url) {
+            getNextPhotos(nextLink.url)
+                .then(([payload = {}, links = {}] = []) => {
+                    const { results = [], ...data } = payload;
+                    setQuery({ apiState: apiStates.fetched, data, links });
+                    setPhotos(prevPhotos => {
+                        console.log('prevPhotos', prevPhotos);
+                        return prevPhotos.concat(results);
+                        // return prevPhotos.push(...results)
+                    });
+                })
+                .catch(error => {
+                    setQuery(prev => ({ ...prev, apiState: apiStates.error, error }));
+                });
+        }
+    }), [query.links.next]);
 
     useEffect(() => {
+       if (searchInputRef.current) {
+           searchInputRef.current.focus();
+       } 
+    }, [searchInputRef]);
+    useEffect(() => {
         if (!searchTerm) {
-            setMetaData(prev => ({ ...prev, data: {} }));
+            setQuery(prev => ({ ...prev, data: {} }));
+            setPhotos([]);
+            return;
         }
 
         let cancelled = false;
-        setMetaData(prev => ({ ...prev, apiState: apiStates.fetching }));
+        setQuery(prev => ({ ...prev, apiState: apiStates.fetching }));
         setPhotos([]);
         searchPhotos({ query: searchTerm, per_page: pageSize })
-            .then(({ results = [], ...data } = {}) => {
+            .then(([payload = {}, links = {}] = []) => {
                 if (cancelled) return;
-                setMetaData({ apiState: apiStates.fetched, data });
+                const { results = [], ...data } = payload;
+                setQuery({ apiState: apiStates.fetched, data, links });
                 setPhotos(results);
             })
-            .catch(err => {
+            .catch(error => {
                 if (cancelled) return;
-                setMetaData(prev => ({ ...prev, apiState: apiStates.error }));
+                setQuery(prev => ({ ...prev, apiState: apiStates.error, error }));
             });
 
         return () => {
             cancelled = true;
         };
     }, [pageSize, searchTerm]);
+
+    console.log("query", query);
 
     return (
         <div className="w-100 flex flex-column items-center">
@@ -55,18 +84,28 @@ export function Search({ pageSize = 30 }) {
                     alt="Klue logo"
                 />
                 <input
+                    ref={searchInputRef}
                     className="input-reset ml3 pa2 br2 ba b--black-20 w5"
                     defaultValue={searchTerm}
                     placeholder="Search for a Photo"
                     onChange={handleSearch}
                 />
             </div>
-            <div className="w-100 mw9 mt4 ph6">
-                {metaData.apiState === apiStates.fetched && (
-                    <Fragment>
-                        <div className="pa2">{JSON.stringify(metaData)}</div>
-                        {photos.length > 0 && <div key={searchTerm}><PhotoGrid searchTerm={searchTerm} photos={photos} metaData={metaData} /></div>}
-                    </Fragment>
+            <div className="w-100 mw9 mv4 ph6">
+                {query.apiState !== apiStates.fetching && (
+                    photos.length > 0 ? (
+                        <div key={searchTerm}>
+                            <PhotoGrid
+                                photos={photos}
+                                query={query}
+                                getNext={getNext}
+                            />
+                        </div>
+                    ) : query.apiState === apiStates.none || searchTerm === "" ? (
+                        <h1>Enter some text to search for photos</h1>
+                    ) : (
+                        <h1>We counldn't find any photos matching "{searchTerm}"</h1>
+                    )
                 )}
             </div>
         </div>

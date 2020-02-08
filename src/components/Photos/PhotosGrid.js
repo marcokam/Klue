@@ -1,4 +1,4 @@
-import React, { useMemo, createRef, useCallback } from "react";
+import React, { Fragment, useMemo, createRef, useCallback } from "react";
 import {
     WindowScroller,
     AutoSizer,
@@ -7,12 +7,15 @@ import {
     createMasonryCellPositioner,
     Masonry
 } from "react-virtualized";
+import { Loading } from "../UI/Loading/Loading";
+import { apiStates } from "../../api";
 
 const columnWidth = 200;
 const defaultHeight = 250;
 const defaultWidth = columnWidth;
 const spacer = 20;
 
+const noop = () => {};
 const cellMeasurerCache = new CellMeasurerCache({
     defaultHeight,
     defaultWidth,
@@ -24,7 +27,7 @@ const getCellPositionerValues = width => ({
     spacer
 });
 
-export function PhotoGrid({ searchTerm = "", photos = [] }) {
+export function PhotoGrid({ photos = [], query = {}, getNext = noop }) {
     const masonryRef = createRef();
     const cellPositioner = useMemo(
         () =>
@@ -40,26 +43,35 @@ export function PhotoGrid({ searchTerm = "", photos = [] }) {
             const height = columnWidth * (item.height / item.width) || defaultHeight;
             const { urls = {}, alt_description = "", description = "" } = item;
             const altText = alt_description || description || `photo`;
+            const { apiState } = query;
+            console.log('query', query);
+
+            if (index > 0 && index === photos.length - 1) getNext();
 
             return (
-                item.id && (
-                    <CellMeasurer cache={cellMeasurerCache} index={index} key={key} parent={parent}>
-                        <div style={style}>
-                            <img
-                                src={urls.thumb}
-                                alt={altText}
-                                className="grow pointer w-100"
-                                style={{
-                                    height: height,
-                                    width: columnWidth
-                                }}
-                            />
-                        </div>
-                    </CellMeasurer>
-                )
+                <Fragment>
+                    {item.id && (
+                        <CellMeasurer cache={cellMeasurerCache} index={index} key={key} parent={parent}>
+                            <div style={style}>
+                                <img
+                                    src={urls.thumb}
+                                    alt={altText}
+                                    className="grow pointer w-100"
+                                    style={{
+                                        height: height,
+                                        width: columnWidth
+                                    }}
+                                />
+                            </div>
+                        </CellMeasurer>
+                    )}
+                    {index > 0 && index === photos.length - 1 && (apiState && apiState === apiStates.fetching) && (
+                        <Loading key="photoGridLoader" className="absolute bottom-0 w-100" />
+                    )}
+                </Fragment>
             );
         },
-        [photos]
+        [getNext, photos, query]
     );
     const recalcGrid = useCallback(
         ({ width }) => {
@@ -93,6 +105,7 @@ export function PhotoGrid({ searchTerm = "", photos = [] }) {
                             height={height}
                             autoHeight
                             scrollTop={scrollTop}
+                            overscanByPixels={100}
                         />
                     )}
                 </AutoSizer>
