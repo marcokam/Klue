@@ -3,7 +3,7 @@ import { useParams, withRouter } from "react-router-dom";
 import { debounce, once } from "lodash-es";
 
 import { searchPhotos, getNextPhotos, apiStates } from "../../api";
-import { PhotoGrid } from "../Photos/PhotosGrid";
+import { PhotoGrid } from "../Photos/Grid/PhotosGrid";
 
 export const Search = withRouter(function SearchComponent({ pageSize = 30, history, location }) {
     const searchInputRef = createRef();
@@ -97,7 +97,7 @@ export const Search = withRouter(function SearchComponent({ pageSize = 30, histo
                                 getNext={getNext}
                             />
                         </div>
-                    ) : query.apiState === apiStates.none || searchTerm === "" ? (
+                    ) : searchTerm === "" ? (
                         <h1>Enter some text to search for photos</h1>
                     ) : (
                         <h1>We counldn't find any photos matching "{searchTerm}"</h1>

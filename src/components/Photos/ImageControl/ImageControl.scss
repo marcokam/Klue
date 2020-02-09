@@ -1,0 +1,5 @@
+.imageControl {
+    &:not(:hover) .overlay {
+        visibility: hidden;
+    }
+}

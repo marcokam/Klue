@@ -1,0 +1,10 @@
+.photosGrid {
+    div {
+        transition: 0.1s all ease-in-out;
+    }
+    & > .selected {
+        & > div:not(.selected) {
+            filter: blur(2px);
+        }
+    }
+}
