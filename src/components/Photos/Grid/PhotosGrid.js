@@ -48,7 +48,6 @@ export function PhotoGrid({ photos = [], query = {}, getNext = noop }) {
             const item = photos[index] || {};
             const height = columnWidth * (item.height / item.width) || defaultHeight;
             const { urls = {}, alt_description = "", description = "", user = {} } = item;
-            console.log("item", item);
             const altText = alt_description || description || `photo`;
             const { apiState } = query;
 
@@ -60,10 +59,11 @@ export function PhotoGrid({ photos = [], query = {}, getNext = noop }) {
                         <CellMeasurer cache={cellMeasurerCache} index={index} key={key} parent={parent}>
                             <div style={style} className="br3 bg-near-white pa2">
                                 <ImageControl
+                                    gridPhotoClass={gridPhotoClass}
                                     imageProps={{
                                         src: urls.thumb,
                                         alt: altText,
-                                        className: `br3 pointer w-100 ${gridPhotoClass}`,
+                                        className: "br3 pointer w-100",
                                         style: {
                                             height: height,
                                             width: columnWidth
@@ -116,7 +116,9 @@ export function PhotoGrid({ photos = [], query = {}, getNext = noop }) {
 
     const handleMouseOver = useCallback(
         event => {
-            toggleSelected(event.target, true);
+            if (event && event.target && event.target.classList.contains(gridPhotoClass)) {
+                toggleSelected(event.target, true);
+            }
         },
         [toggleSelected]
     );
