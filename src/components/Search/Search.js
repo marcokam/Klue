@@ -9,7 +9,7 @@ export const Search = withRouter(function SearchComponent({ pageSize = 30, histo
     const searchInputRef = createRef();
     const { searchTerm = "" } = useParams();
     const dbUpdateRoute = useCallback(debounce((searchTerm = "") => {
-        history.replace({
+        history.push({
             ...location,
             pathname: searchTerm !== "" ? `/search/${searchTerm}` : `/search`
         });
@@ -39,8 +39,12 @@ export const Search = withRouter(function SearchComponent({ pageSize = 30, histo
     }), [query.links.next]);
 
     useEffect(() => {
-       if (searchInputRef.current) searchInputRef.current.focus();
-    }, [searchInputRef]);
+       if (searchInputRef.current) {
+           const inputEl = searchInputRef.current;
+           inputEl.focus();
+           inputEl.value = searchTerm;
+       }
+    }, [searchInputRef, searchTerm]);
 
     useEffect(() => {
         setPhotos([]);
