@@ -10,7 +10,6 @@ import {
 } from "react-virtualized";
 import { debounce } from "lodash-es";
 import { Loading } from "../../UI/Loading/Loading";
-import { apiStates } from "../../../api";
 import { ImageControl } from "../ImageControl/ImageControl";
 
 const columnWidth = 200;
@@ -49,14 +48,14 @@ export function PhotoGrid({ photos = [], query = {}, getNext = noop }) {
             const height = columnWidth * (item.height / item.width) || defaultHeight;
             const { urls = {}, alt_description = "", description = "", user = {} } = item;
             const altText = alt_description || description || `photo`;
-            const { apiState } = query;
+            const { links = {} } = query;
 
             if (index > 0 && index === photos.length - 1) getNext();
 
             return (
-                <Fragment>
+                <Fragment key={key}>
                     {item.id && (
-                        <CellMeasurer cache={cellMeasurerCache} index={index} key={key} parent={parent}>
+                        <CellMeasurer cache={cellMeasurerCache} index={index} parent={parent}>
                             <div style={style} className="br3 bg-near-white pa2">
                                 <ImageControl
                                     gridPhotoClass={gridPhotoClass}
@@ -75,7 +74,7 @@ export function PhotoGrid({ photos = [], query = {}, getNext = noop }) {
                             </div>
                         </CellMeasurer>
                     )}
-                    {index > 0 && index === photos.length - 1 && apiState && apiState === apiStates.fetching && (
+                    {index > 0 && index === photos.length - 1 && links.next && (
                         <Loading key="photoGridLoader" className="absolute bottom-0 w-100" />
                     )}
                 </Fragment>
@@ -141,6 +140,7 @@ export function PhotoGrid({ photos = [], query = {}, getNext = noop }) {
                                     const item = photos[index] || {};
                                     return item ? item.id : null;
                                 }}
+                                key={`masonry_${width}`}
                                 ref={masonryRef}
                                 cellCount={photos.length}
                                 cellMeasurerCache={cellMeasurerCache}
